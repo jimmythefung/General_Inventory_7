@@ -1,3 +1,6 @@
+# Retired
+
+
 # Write a script that read from sold.csv and update number of sold items
 # Description builder in HTML, write out model number and ID. This help inspecting title vs description
 
@@ -84,6 +87,7 @@ def print_inventory(Prod_List):
         locationArr = printerFormat(Prod_List, heading, 'LOCATION')
         CSV_ArrWrite(modelArr, file_dst_ByModel)
         CSV_ArrWrite(locationArr, file_dst_ByLocation)
+
         
         #file_dst_ByModel = savePath + '\\' +'ALL'+'_ByModel.csv'
         #file_dst_ByLocation = savePath + '\\' +'ALL'+'_ByLocation.csv'
