@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 # Name:        module
 #
-# Revision:    5.0
+# Revision:    7.0
 #
 # Purpose:     Developed for Bluesky Trading.
 #              Inventory control, inventory look up and updates,
@@ -10,7 +10,7 @@
 # Author:      Chi Yung 'Jimmy' Fung
 #
 # Created:     24/12/2013
-# Copyright:   (c) PSU OFFICE 2013
+# Copyright:   (c) Bluesky Trading 2013
 # Licence:     <Open Source>
 #-------------------------------------------------------------------------------
 
@@ -253,22 +253,23 @@ def ebayFileOut(Prod_List, active_List, sold_List, path_offline, templatePath, o
             # 1. Item is online
             # 2. Item's LOCATION is not the Custom Label
             # 3. QTY mismatch
-            # 4. ebayID mismatch against LISTING IDindexedBrand
-            if flag == 'found' and (item.data['QTY'] != activeItem.data['Quantity Available']): #or (flag == 'found' and (item.data['SOLD'] == '0') and (item.data['LISTING TITLE'] != activeItem.data['Item Title'])): 
+            # 4. ebay title mismatch Listing title (forget this, revise qty must be allowed, misamtch title must be relist)
+            if flag == 'found' and (item.data['QTY'] != activeItem.data['Quantity Available']):
                 #print flag
                 
                 ## Modify the following code to revise Price and Quantity!!
-                if item.data['QTY'] == '0':
+                if str(item.data['QTY']) == '0':
+                    temp_dict['Title'] = item.data['LISTING TITLE']
                     temp_dict['Action(CC=Cp1252)'] = 'End'
                     temp_dict['EndCode'] = 'NotAvailable'
-                    temp_dict['ItemID'] = item.data['LISTING ID'].split()[1]
+                    #temp_dict['ItemID'] = item.data['LISTING ID'].split()[1] #this one is bad, could give old (false) listing ID to End item
+                    temp_dict['ItemID'] = activeItem.data['Item ID']
                     temp_dict['CustomLabel'] = item.data['LOCATION']
                 else:
                     temp_dict['Action(CC=Cp1252)'] = 'Revise'
 
 ##                if item.data['SOLD'] == 0:
-##                    temp_dict['Title'] = item.data['LISTING TITLE']
-
+                    #temp_dict['Title'] = item.data['LISTING TITLE'] #commeted out cuz revise title for sold item is not allowed
                     temp_dict['ItemID'] = item.data['LISTING ID'].split()[1]
                     temp_dict['Quantity'] = item.data['QTY']
                     temp_dict['StartPrice'] = item.data['PRICE']
@@ -306,6 +307,9 @@ def ebayFileOut(Prod_List, active_List, sold_List, path_offline, templatePath, o
 
                 ## Modify the following code to revise Title, Price and Quantity!!
                 temp_dict['Action(CC=Cp1252)'] = 'Relist'
+                if str(item.data['QTY']) == '0':
+                    temp_dict['Action(CC=Cp1252)'] = 'End'
+                    
                 temp_dict['Title'] = item.data['LISTING TITLE']
                 temp_dict['Duration'] = 'GTC'
                 temp_dict['ItemID'] = item.data['LISTING ID'].split()[1]
@@ -496,7 +500,7 @@ def listSort(Prod_List, sortBy='NONE'):
             # No point sorting by alphabetical order
             
 
-        elif prod == 'MOTHERBOARD':
+        elif prod == 'MOTHERBOARD' or prod == 'CPU':
             keepBrand = []
             
             brand_dict = Dictionarize(prod_dict[prod], 'BRAND') #brand_dict = ['EMACHINES': [...], 'ASUS': [...], ...etc]
@@ -684,11 +688,12 @@ def compare_ebay(Prod_List, active_List, sold_List):
         if flag == 'found':
             item.data['ebayCategory'] = activeItem.data['Category Number']
             item.data['EBAY QTY'] = activeItem.data['Quantity Available']
+            item.data['EBAY PRICE'] = activeItem.data['Price']
             #item.data['ebayID'] = 'ID: '+ activeItem.data['Item ID']
             item.data['ebayID'] = activeItem.data['Item ID']
             
             #if item.data['LISTING ID'] != item.data['ebayID'].split()[1]: # May be superflorus statement; actually this happens when the file is manually resaved
-            if item.data['LISTING ID'] == '' or item.data['LISTING ID'] == 'ID: ':
+            if item.data['LISTING ID'] == '' or item.data['LISTING ID'] == 'ID: ' or (len(item.data['LISTING ID'].split())==2 and item.data['LISTING ID'].split()[1].isdigit() and item.data['LISTING ID'].split()[1]!= item.data['ebayID']) :
                 item.data['LISTING ID'] = 'ID: ' + activeItem.data['Item ID']
                 
             item.data['ebayTitle'] = activeItem.data['Item Title']
@@ -921,88 +926,10 @@ def folder_check(all_paths, all_files):
     if not os.path.exists(file_inventory):
         
         fout = open(file_inventory, 'wb') # "wb" for overwrite, 'a' for appending single-spaced row entried
-        fout.write('PRODUCT,BRAND,LOCATION,LISTING TITLE,QTY,PRICE,DESCRIPTION,ebayCategory,,LISTING,STATUS,,ebayID,LISTING ID,,,ebayTitle,EBAY QTY,SOLD,QTY UPDATE,,UPC,BARCODE1,BARCODE2,BARCODE3,INFO1,INFO2,INFO3,INFO4,INFO5,INFO6,INFO7,INFO7,INFO8,INFO9,INFO10,LAST MODIFIED\r\n')
-        fout.write('POWER SUPPLY,DELL,A1,DELL 280W POWER SUPPLY D280P-00 RT490 TESTED + WARRANTY,3,27.63,Tested working.<div>Guaranteed against DOA.</div><div>30 days warranty.</div><div><br></div><div>Continental US buyers only.</div><div>Please check my listing for more computer parts.</div>,42017,,LISTED,O,,141147203132,ID: 141147203132,,,DELL 280W POWER SUPPLY D280P-00 RT490 TESTED + WARRANTY,3,0,,,,,,,,D280P-00,,RT490,,280,CN0RT4901797276CC5ZA,CN0RT4901797276CC5ZA,,,,\r\n')
-        fout.write('MOTHERBOARD,ABIT,OTHER 63,ABIT BH7 V: 1.1 MOTHRBOARD TESTED + WARRANTY,1,47.99,Tested working.<div>Guaranteed against DOA.</div><div>30 days warranty.</div><div><br></div><div>Continental US buyers only.</div><div>Please check my listing for more computer parts.</div>,1244,,LISTED,O,,141127371366,ID: 141127371366,,,ABIT BH7 V: 1.1 MOTHRBOARD TESTED + WARRANTY,1,0,,,,,,,,,,,,,,,,,,\r\n')
-##        FileOut = csv.writer(fout)
 
-##        heading = ['PRODUCT',
-##                   'BRAND',
-##                   'LOCATION',
-##                   'LISTING TITLE',
-##                   'QTY',
-##                   'PRICE',
-##                   'DESCRIPTION',
-##                   'ebayCategory',
-##                   '',
-##                   'LISTING',
-##                   'STATUS',
-##                   '',
-##                   'ebayID',
-##                   'LISTING ID',
-##                   '',
-##                   'ebayTitle',
-##                   'EBAY QTY',
-##                   'SOLD',
-##                   'QTY UPDATE',
-##                   '',
-##                   'UPC',
-##                   'BARCODE1',
-##                   'BARCODE2',
-##                   'BARCODE3',
-##                   'INFO1',
-##                   'INFO2',
-##                   'INFO3',
-##                   'INFO4',
-##                   'INFO5',
-##                   'INFO6',
-##                   'INFO7',
-##                   'INFO8',
-##                   'INFO9',
-##                   'INFO10',
-##                   'LAST MODIFIED',
-##                   ]
-##
-##        example = ['POWER SUPPLY (EXAMPLE)',
-##                   'DELL (EXAMPLE)',
-##                   'A1 (EXAMPLE)',
-##                   'DELL 280W POWER SUPPLY D280P-00 RT490 TESTED + WARRANTY (EXAMPLE)',
-##                   '3',
-##                   '27.63',
-##                   'TESTED WORKING.<DIV>GUARANTEED AGAINST DOA.</DIV><DIV>30 DAYS WARRANTY.</DIV><DIV>CONTINENTAL US BUYERS ONLY.</DIV><DIV>PLEASE CHECK MY LISTING FOR MORE COMPUTER PARTS.</DIV>',
-##                   '42017',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   '',
-##                   ]
-                   
+        fout.write('PRODUCT,BRAND,LOCATION,LISTING TITLE,QTY,PRICE,DESCRIPTION,ebayCategory,NOTE,LISTING,STATUS,ebayID,LISTING ID,ebayTitle,EBAY QTY,EBAY PRICE,SOLD,QTY UPDATE,UPC,BARCODE1,BARCODE2,BARCODE3,INFO1,INFO2,INFO3,INFO4,INFO5,INFO6,INFO7,INFO7,INFO8,INFO9,INFO10,LAST MODIFIED')     
+        fout.write('POWER SUPPLY,DELL,A1,DELL 280W POWER SUPPLY D280P-00 RT490 TESTED + WARRANTY,3,27.63,Tested working.<div>Guaranteed against DOA.</div><div>30 days warranty.</div><div><br></div><div>Continental US buyers only.</div><div>Please check my listing for more computer parts.</div>,42017,,LISTED,O,141147203132,ID: 141147203132,DELL 280W POWER SUPPLY D280P-00 RT490 TESTED + WARRANTY,3,$27.63,0,,,CN0RT4901797276CC5ZA,,,,D280P-00,,RT490,,280,,,,,,')
 
-##        FileOut.writerow(heading)
-##        FileOut.writerow(example)
         fout.close()
 
         
@@ -1392,11 +1319,8 @@ def printList(Prod_List):
     heading = ['LOCATION', 'LISTING TITLE', 'ebayID']
     spacing = ' '*3
     
-    print ''
-    print 'Accessed: ' + str(datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p'))
-    print ''
+    print ''.ljust(5)
     print 'Num'.ljust(5), 'Location'.ljust(len('Location')+len(spacing)), 'Qty'.ljust(4), 'Price'.ljust(8), 'ebay ID'.ljust(14), 'Item Name'.ljust(80), 'Status'.ljust(8), 'Listing'.ljust(6)
-    print ''
 
     # display output
     entryNum = 0
@@ -1406,14 +1330,85 @@ def printList(Prod_List):
         if item.data['QTY'] == '0':
             comment = '*Out of Stock'
 
-
+        print ''.ljust(5), ''.ljust(5), ''.ljust(5)
         print ('#'+str(entryNum)).ljust(5), item.data['LOCATION'].ljust(len('Location')+len(spacing)), item.data['QTY'].ljust(4), ('$'+item.data['PRICE']).ljust(8), item.data['ebayID'].ljust(14), item.data['LISTING TITLE'].ljust(80), item.data['STATUS'].ljust(8), item.data['LISTING'].ljust(6)
         entryNum = entryNum + 1
 
-
+    print ''.ljust(5)
+    print 'Accessed: ' + str(datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p'))
 
     
+def service_add(result_List):
 
+    
+    if len(result_List) == 1:
+        item = result_List[0]
+    else:
+        return 0
+
+    print ''
+    print 'Single item found! Available command:'
+    print '+x           : add x qty to the first result.'
+    print '-x           : subtact x qty to the first result.'
+    print 'Blank enter  : return to previous menu.'
+    print ''
+
+    while True:
+        x = raw_input('Command: ')
+        if x!= '' and (x[0] == '+' or x[0] == '-') and x.strip(x[0]).isdigit():
+            op = x[0]
+            qty = int( x.strip(x[0]) )
+
+            currentValue = int(item.data['QTY'])
+            
+
+
+            # mod qty
+            if op == '+':
+                item.data['QTY'] = str( currentValue + qty )
+            if op =='-':
+                item.data['QTY'] = str( currentValue - qty )
+                if item.data['QTY'] < 0:
+                    item.data['QTY'] = 0
+
+            # Verify
+            print 'Selected  :   ' + item.data['LISTING TITLE']
+            print 'Qty before:   ' + str(currentValue)
+            print 'Operation :  '+str(op) + str(qty)
+            print '-'* len('Operation :  +' + str(qty))
+            print 'Qty now   :   ' + str(item.data['QTY'])
+            print ''
+            ans = raw_input('Confirm? y/n: ')
+
+            if ans.lower() == 'y' or ans == '':
+
+                timestamp(item)
+                
+                print ''
+                print 'saved.\n'
+            else:
+                item.data['QTY'] = str( currentValue )
+                print ''
+                print 'aborted.\n'
+                
+
+            # Warn to verify result
+            
+            entryNum = 0     
+            print 'Please verify result:'
+            print ''
+            print 'Num'.ljust(5), 'Location'.ljust(len('Location')), 'Qty'.ljust(4), 'Price'.ljust(8), 'ebay ID'.ljust(14), 'Item Name'.ljust(80), 'Status'.ljust(8), 'Listing'.ljust(6)
+
+            print ('#'+str(entryNum)).ljust(5), item.data['LOCATION'].ljust(len('Location')), item.data['QTY'].ljust(4), ('$'+item.data['PRICE']).ljust(8), item.data['ebayID'].ljust(14), item.data['LISTING TITLE'].ljust(80), item.data['STATUS'].ljust(8), item.data['LISTING'].ljust(6)
+            break
+              
+        elif x == '':
+            break
+        
+        else:
+            print 'Invalid command.'
+    
+    
 
 def service(Prod_List, active_List, sold_List):
     legend = [
@@ -1443,7 +1438,9 @@ def service(Prod_List, active_List, sold_List):
             com = raw_input('Command: ')
             c = com.split()
 
+
             # Modify quantity
+            #if (len(c) != 0) and ('#' in c[0][0]) and (c[0][1].isdigit() and (int(c[0][1])-1) < len(Prod_List)) and ('+' in c[1][0] or '-' in c[1][0]):
             
             if (len(c) == 2) and ('#' in c[0][0]) and (c[0][1].isdigit() and (int(c[0][1])-1) < len(Prod_List)) and ('+' in c[1][0] or '-' in c[1][0]):
                 
@@ -1508,8 +1505,11 @@ def service(Prod_List, active_List, sold_List):
 
                 break
 
+
+
+
             # Modify location, price, item name
-            elif (len(c) == 2) and ('#' in c[0][0]) and ('@' in c[1][0] or '$' in c[1][0] or '*' in c[1][0] or '!' in c[1][0] or '#' in c[1][0]):
+            elif (len(c) != 0) and ('#' in c[0][0]) and ('@' in c[1][0] or '$' in c[1][0] or '*' in c[1][0] or '!' in c[1][0] or '#' in c[1][0]):
                 # valid input, processing now
                 if c[0].strip(c[0][0]).isdigit():
                     index = int(c[0].strip(c[0][0])) # strip '#'
@@ -1529,6 +1529,7 @@ def service(Prod_List, active_List, sold_List):
 
                     if op == '*':
                         mod = 'LISTING TITLE'
+                        value = com.split('*')[1]
 
                     if op == '!': # this might not be helpful, ebayID gets altered by compare_ebay in a special way
                         mod = 'ebayID'
@@ -1628,6 +1629,7 @@ def menu():
         'report  - Generate offline reports and CSV listing files',
         'sort    - Choose how to sort Master Inventory',
         'qty     - Options to modify listing quantity',
+        'scanner - look up only using scanner',
         'exit',
         '\n',
         ]
@@ -1654,6 +1656,7 @@ def startup1(Prod_List, active_List, sold_List):
             
         elif choice == 'REPORT':
             print 'Please wait while report files are being generated... '
+            Prod_List = compare_ebay(Prod_List, active_List, sold_List)
             csv_report(Prod_List, active_List, sold_List, path_offline, templatePath)
             #dummy2 = raw_input('Hit enter to return to menu')
             
@@ -1678,6 +1681,35 @@ def startup1(Prod_List, active_List, sold_List):
 
         elif choice == 'EXIT':
             break
+        
+        elif choice == 'SCANNER':
+
+            while True:
+                print ''
+                print 'Enter to return to main menu'
+                barcode = raw_input('Scan code: ').strip('\r\n').upper()
+
+                if barcode == '':
+                    break
+
+                if 'CN' in barcode:
+                    barcode = barcode[3:8]
+                print 'barcode: ' +barcode
+
+            
+                
+                result_List = lookup(barcode, Prod_List)
+                printList(result_List)
+
+                service_add(result_List) #if single item, this activates
+                print '\n'*5
+
+                #Apply changes made by service
+                saveItemList(file_inventory, Prod_List, 0)
+
+                #Reload Prod_List
+                Prod_List = load_data(file_inventory)
+                
 
         else:
             result_List = lookup(choice, Prod_List)
@@ -1697,5 +1729,3 @@ def startup1(Prod_List, active_List, sold_List):
 
 
         print ''
-
-
