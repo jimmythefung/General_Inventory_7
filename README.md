@@ -2,7 +2,7 @@
 An inventory management solution for small businesses designed to work with eBay fileExchange platform for bulk listing directly, or through eBay's turbolister.
 
 # What it does?
-The Master Template.csv is used to keep track of your product inventory. Modify it manually to add new products.\n
+The Master Template.csv is used to keep track of your product inventory. Modify it manually to add new products.  
 The main.py program loads Master Template.csv and provides user with an interface to perform various tasks:\n
 
 # Requirements
